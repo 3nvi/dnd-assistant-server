@@ -1,7 +1,9 @@
 import { ApolloServer, gql } from 'apollo-server';
+import { User } from 'auth0';
+import mongoose from 'mongoose';
 import dateScalar from './scalars/Date';
 import { authClient } from './auth';
-import { User } from 'auth0';
+import models, { Campaign } from './models';
 
 const typeDefs = gql`
   scalar Date
@@ -12,34 +14,37 @@ const typeDefs = gql`
     message: String!
   }
 
+  type User {
+    _id: ID!
+    name: String!
+    email: String!
+    image: String
+  }
+
   type Campaign {
-    name: String
-    dungeonMaster: String
-    players: [String]
+    _id: ID!
+    name: String!
+    dungeonMaster: User!
+    players: [User!]!
   }
 
   type Query {
-    campaigns: [Campaign]
+    campaigns: [Campaign]!
+    users: [User]!
   }
 `;
-
-const campaigns = [
-  {
-    name: 'Harry Potter and the Chamber of Secrets',
-    dungeonMaster: 'J.K. Rowling',
-    players: ['Kostas', 'Aggelos', 'Stefanos'],
-  },
-  {
-    name: 'Jurassic Park',
-    dungeonMaster: 'Michael Crichton',
-    players: ['Kostas', 'Aggelos', 'Stefanos'],
-  },
-];
 
 const resolvers = {
   Date: dateScalar,
   Query: {
-    campaigns: () => campaigns,
+    campaigns: async (): Promise<Campaign[]> => {
+      const campaigns = await models.campaign.find({});
+      return campaigns;
+    },
+    users: async (): Promise<User[]> => {
+      const users = await models.user.find({});
+      return users;
+    },
   },
   MutationResponse: {
     __resolveType: () => null,
@@ -51,22 +56,31 @@ const resolvers = {
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  context: async ({ req }): Promise<{ user: User | null }> => {
+  context: async ({ req }): Promise<{ user: User | null; models: typeof models }> => {
     // get the user token from the Authorization header (defined as "Bearer {TOKEN}")
+    let user;
     const token = req.headers.authorization?.split(' ')[1] || '';
     if (!token) {
-      return { user: null };
+      user = null;
+    } else {
+      // try to retrieve a user with the token
+      user = await authClient.getProfile(token);
     }
 
-    // try to retrieve a user with the token
-    const user = await authClient.getProfile(token);
-
     // add the user to the context
-    return { user };
+    return { user, models };
   },
 });
 
 // The `listen` method launches a web server.
-server.listen().then(({ url }) => {
-  console.log(`🚀  Server ready at ${url}`);
+server.listen().then(async ({ url }) => {
+  try {
+    await mongoose.connect('mongodb://localhost:27017/graphql', {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log(`🚀  Server ready at ${url}`);
+  } catch (err) {
+    console.log(err.message);
+  }
 });
