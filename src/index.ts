@@ -1,9 +1,10 @@
-import { ApolloServer, gql } from 'apollo-server';
-import { User } from 'auth0';
+import { ApolloServer, gql, ValidationError, UserInputError } from 'apollo-server/dist';
 import mongoose from 'mongoose';
 import dateScalar from './scalars/Date';
 import { authClient } from './auth';
-import models, { Campaign } from './models';
+import { MutationResponse } from './helpers';
+import models, { User, Campaign, campaignModelName } from './models';
+import { MutationCreateCampaignArgs } from './schema';
 
 const typeDefs = gql`
   scalar Date
@@ -19,6 +20,7 @@ const typeDefs = gql`
     name: String!
     email: String!
     image: String
+    campaigns: [Campaign]!
   }
 
   type Campaign {
@@ -28,9 +30,24 @@ const typeDefs = gql`
     players: [User!]!
   }
 
+  type CampaignCreationResponse implements MutationResponse {
+    code: String!
+    success: Boolean!
+    message: String!
+    campaign: Campaign
+  }
+
   type Query {
     campaigns: [Campaign]!
     users: [User]!
+  }
+
+  type Mutation {
+    createCampaign(
+      name: String!
+      dungeonMaster: String!
+      players: [String]!
+    ): CampaignCreationResponse!
   }
 `;
 
@@ -38,16 +55,41 @@ const resolvers = {
   Date: dateScalar,
   Query: {
     campaigns: async (): Promise<Campaign[]> => {
-      const campaigns = await models.campaign.find({});
-      return campaigns;
+      return await models.campaign.find().populate('dungeonMaster players');
     },
     users: async (): Promise<User[]> => {
-      const users = await models.user.find({});
-      return users;
+      return await models.user.find().populate({
+        path: 'campaigns',
+        model: campaignModelName,
+      });
+    },
+  },
+  Mutation: {
+    createCampaign: async (
+      parent: null,
+      { name, dungeonMaster, players }: MutationCreateCampaignArgs
+    ): Promise<MutationResponse<{ campaign: Campaign }>> => {
+      if (players.includes(dungeonMaster)) {
+        throw new UserInputError("The DM can't be a player");
+      }
+
+      try {
+        let campaign = await models.campaign.create({ name, dungeonMaster, players });
+        campaign = await campaign.populate('dungeonMaster players').execPopulate();
+
+        return new MutationResponse(
+          { campaign },
+          'CampaignCreationSuccess',
+          'Campaign created successfully'
+        );
+      } catch (err) {
+        console.log(err);
+        return new ValidationError(err.message);
+      }
     },
   },
   MutationResponse: {
-    __resolveType: () => null,
+    __resolveType: (): null => null,
   },
 };
 

@@ -1,13 +1,15 @@
 import mongoose from 'mongoose';
+import { Campaign, campaignModelName } from './campaign';
 
 export interface User extends mongoose.Document {
   name: string;
   email: string;
   sub: string;
   image?: string;
+  campaigns: Campaign[];
 }
 
-export const modelName = 'user';
+export const userModelName = 'user';
 
 const userSchema = new mongoose.Schema<User>({
   name: {
@@ -26,8 +28,15 @@ const userSchema = new mongoose.Schema<User>({
     type: String,
     required: false,
   },
+  campaigns: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: campaignModelName,
+      required: false,
+    },
+  ],
 });
 
-const user = mongoose.model<User>(modelName, userSchema);
+const user = mongoose.model<User>(userModelName, userSchema);
 
 export default user;

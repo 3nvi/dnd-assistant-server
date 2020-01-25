@@ -7,3 +7,8 @@ export interface ApolloGuard<TSource, TContext, TArgs = undefined> {
     TArgs
   >;
 }
+
+// export interface MutationResolver<Args, ReturnType> {
+// TODO
+// (parent: null, args: Args, context: )
+// }
