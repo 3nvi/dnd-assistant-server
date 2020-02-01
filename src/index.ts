@@ -105,7 +105,7 @@ const resolvers = {
       { id }: MutationDeleteCampaignArgs
     ): Promise<MutationResponse<{ campaign: Campaign }>> => {
       try {
-        // await models.campaign.findOneAndDelete({_id: id });
+        await models.campaign.findOneAndDelete({ _id: id });
         return new MutationResponse('CampaignDeletionSuccess', 'Campaign deleted successfully');
       } catch (err) {
         return new ApolloError(err.message, 'DATABASE_ERROR');
