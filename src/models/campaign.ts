@@ -5,6 +5,8 @@ export interface Campaign extends mongoose.Document {
   name: string;
   dungeonMaster: User;
   players: User[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const campaignModelName = 'campaign';

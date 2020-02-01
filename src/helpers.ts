@@ -1,5 +1,5 @@
-export class MutationResponse<T extends {}> {
-  constructor(data: T, code: string, message: string) {
+export class MutationResponse<T extends {} = {}> {
+  constructor(code: string, message: string, data?: T) {
     return {
       ...(data || {}),
       code,

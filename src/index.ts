@@ -1,10 +1,16 @@
-import { ApolloServer, gql, ValidationError, UserInputError } from 'apollo-server/dist';
+import {
+  ApolloServer,
+  gql,
+  ValidationError,
+  UserInputError,
+  ApolloError,
+} from 'apollo-server/dist';
 import mongoose from 'mongoose';
 import dateScalar from './scalars/Date';
 import { authClient } from './auth';
 import { MutationResponse } from './helpers';
 import models, { User, Campaign, campaignModelName } from './models';
-import { MutationCreateCampaignArgs } from './schema';
+import { MutationCreateCampaignArgs, MutationDeleteCampaignArgs } from './schema';
 
 const typeDefs = gql`
   scalar Date
@@ -28,6 +34,8 @@ const typeDefs = gql`
     name: String!
     dungeonMaster: User!
     players: [User!]!
+    createdAt: Date!
+    updatedAt: Date!
   }
 
   type CampaignCreationResponse implements MutationResponse {
@@ -37,9 +45,15 @@ const typeDefs = gql`
     campaign: Campaign
   }
 
+  type CampaignDeletionResponse implements MutationResponse {
+    code: String!
+    success: Boolean!
+    message: String!
+  }
+
   type Query {
-    campaigns: [Campaign]!
-    users: [User]!
+    campaigns: [Campaign!]!
+    users: [User!]!
   }
 
   type Mutation {
@@ -48,6 +62,8 @@ const typeDefs = gql`
       dungeonMaster: String!
       players: [String]!
     ): CampaignCreationResponse!
+
+    deleteCampaign(id: ID!): CampaignDeletionResponse!
   }
 `;
 
@@ -77,14 +93,22 @@ const resolvers = {
         let campaign = await models.campaign.create({ name, dungeonMaster, players });
         campaign = await campaign.populate('dungeonMaster players').execPopulate();
 
-        return new MutationResponse(
-          { campaign },
-          'CampaignCreationSuccess',
-          'Campaign created successfully'
-        );
+        return new MutationResponse('CampaignCreationSuccess', 'Campaign created successfully', {
+          campaign,
+        });
       } catch (err) {
-        console.log(err);
-        return new ValidationError(err.message);
+        return new ApolloError(err.message, 'DATABASE_ERROR');
+      }
+    },
+    deleteCampaign: async (
+      parent: null,
+      { id }: MutationDeleteCampaignArgs
+    ): Promise<MutationResponse<{ campaign: Campaign }>> => {
+      try {
+        // await models.campaign.findOneAndDelete({_id: id });
+        return new MutationResponse('CampaignDeletionSuccess', 'Campaign deleted successfully');
+      } catch (err) {
+        return new ApolloError(err.message, 'DATABASE_ERROR');
       }
     },
   },
