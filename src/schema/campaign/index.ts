@@ -1,1 +1,3 @@
-export { default } from './typeDefs';
+export { default as typeDefs } from './typeDefs';
+export { default as queries } from './queries';
+export { default as mutations } from './mutations';
