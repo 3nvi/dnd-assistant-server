@@ -1,16 +1,15 @@
-import {
-  ApolloServer,
-  gql,
-  ValidationError,
-  UserInputError,
-  ApolloError,
-} from 'apollo-server/dist';
+import { ApolloServer, gql, UserInputError, ApolloError } from 'apollo-server/dist';
 import mongoose from 'mongoose';
 import dateScalar from './scalars/Date';
 import { authClient } from './auth';
 import { MutationResponse } from './helpers';
 import models, { User, Campaign, campaignModelName } from './models';
-import { MutationCreateCampaignArgs, MutationDeleteCampaignArgs } from './schema';
+import {
+  MutationCreateCampaignArgs,
+  MutationDeleteCampaignArgs,
+  MutationUpdateCampaignArgs,
+  QueryCampaignArgs,
+} from './schema';
 
 const typeDefs = gql`
   scalar Date
@@ -45,6 +44,13 @@ const typeDefs = gql`
     campaign: Campaign
   }
 
+  type CampaignUpdateResponse implements MutationResponse {
+    code: String!
+    success: Boolean!
+    message: String!
+    campaign: Campaign
+  }
+
   type CampaignDeletionResponse implements MutationResponse {
     code: String!
     success: Boolean!
@@ -52,6 +58,7 @@ const typeDefs = gql`
   }
 
   type Query {
+    campaign(id: ID!): Campaign
     campaigns: [Campaign!]!
     users: [User!]!
   }
@@ -60,8 +67,10 @@ const typeDefs = gql`
     createCampaign(
       name: String!
       dungeonMaster: String!
-      players: [String]!
+      players: [String!]!
     ): CampaignCreationResponse!
+
+    updateCampaign(id: ID!, name: String, players: [String!]): CampaignCreationResponse!
 
     deleteCampaign(id: ID!): CampaignDeletionResponse!
   }
@@ -70,6 +79,19 @@ const typeDefs = gql`
 const resolvers = {
   Date: dateScalar,
   Query: {
+    campaign: async (parent: null, { id }: QueryCampaignArgs): Promise<Campaign> => {
+      let campaign;
+      try {
+        campaign = await models.campaign.findById(id).populate('dungeonMaster players');
+      } catch (err) {
+        throw new ApolloError(err.message);
+      }
+
+      if (!campaign) {
+        throw new ApolloError('Invalid Campaign Id', 'NOT_FOUND');
+      }
+      return campaign;
+    },
     campaigns: async (): Promise<Campaign[]> => {
       return await models.campaign.find().populate('dungeonMaster players');
     },
@@ -99,6 +121,34 @@ const resolvers = {
       } catch (err) {
         return new ApolloError(err.message, 'DATABASE_ERROR');
       }
+    },
+    updateCampaign: async (
+      parent: null,
+      { id, name, players }: MutationUpdateCampaignArgs
+    ): Promise<MutationResponse<{ campaign: Campaign }>> => {
+      let campaign = await models.campaign.findById(id);
+      if (!campaign) {
+        return new UserInputError('Invalid Campaign Id');
+      }
+
+      if (name) {
+        campaign.name = name;
+      }
+      if (players) {
+        // @ts-ignore
+        campaign.players = players;
+      }
+
+      try {
+        campaign.save();
+      } catch (err) {
+        return new UserInputError(err.message);
+      }
+
+      campaign = await campaign.populate('dungeonMaster players').execPopulate();
+      return new MutationResponse('CampaignUpdateSuccess', 'Campaign updates successfully', {
+        campaign,
+      });
     },
     deleteCampaign: async (
       parent: null,
