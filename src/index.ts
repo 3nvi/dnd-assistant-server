@@ -1,15 +1,12 @@
-import {
-  ApolloServer,
-  gql,
-  UserInputError,
-  ApolloError,
-  AuthenticationError,
-} from 'apollo-server/dist';
+import { ApolloServer, gql, UserInputError, ApolloError, AuthenticationError } from 'apollo-server';
 import mongoose from 'mongoose';
 import dateScalar from './scalars/Date';
 import { authClient } from './auth';
 import { MutationResponse } from './helpers';
 import models, { User, Campaign, campaignModelName } from './models';
+import rootTypeDefs from './schema/root';
+import userTypeDefs from './schema/user';
+import campaignTypeDefs from './schema/campaign';
 import {
   MutationCreateCampaignArgs,
   MutationDeleteCampaignArgs,
@@ -17,70 +14,7 @@ import {
   QueryCampaignArgs,
 } from './schema';
 
-const typeDefs = gql`
-  scalar Date
-
-  interface MutationResponse {
-    code: String!
-    success: Boolean!
-    message: String!
-  }
-
-  type User {
-    _id: ID!
-    name: String!
-    email: String!
-    image: String
-    campaigns: [Campaign]!
-  }
-
-  type Campaign {
-    _id: ID!
-    name: String!
-    dungeonMaster: User!
-    players: [User!]!
-    createdAt: Date!
-    updatedAt: Date!
-  }
-
-  type CampaignCreationResponse implements MutationResponse {
-    code: String!
-    success: Boolean!
-    message: String!
-    campaign: Campaign
-  }
-
-  type CampaignUpdateResponse implements MutationResponse {
-    code: String!
-    success: Boolean!
-    message: String!
-    campaign: Campaign
-  }
-
-  type CampaignDeletionResponse implements MutationResponse {
-    code: String!
-    success: Boolean!
-    message: String!
-  }
-
-  type Query {
-    campaign(id: ID!): Campaign
-    campaigns: [Campaign!]!
-    users: [User!]!
-  }
-
-  type Mutation {
-    createCampaign(
-      name: String!
-      dungeonMaster: String!
-      players: [String!]!
-    ): CampaignCreationResponse!
-
-    updateCampaign(id: ID!, name: String, players: [String!]): CampaignCreationResponse!
-
-    deleteCampaign(id: ID!): CampaignDeletionResponse!
-  }
-`;
+const typeDefs = [rootTypeDefs, userTypeDefs, campaignTypeDefs];
 
 const resolvers = {
   Date: dateScalar,
