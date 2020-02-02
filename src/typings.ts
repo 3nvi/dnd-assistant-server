@@ -52,6 +52,7 @@ export type CampaignUpdateResponse = MutationResponse & {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  _placeholder?: Maybe<Scalars['String']>;
   createCampaign: CampaignCreationResponse;
   updateCampaign: CampaignCreationResponse;
   deleteCampaign: CampaignDeletionResponse;
@@ -60,7 +61,7 @@ export type Mutation = {
 export type MutationCreateCampaignArgs = {
   name: Scalars['String'];
   dungeonMaster: Scalars['String'];
-  players: Array<Maybe<Scalars['String']>>;
+  players: Array<Scalars['String']>;
 };
 
 export type MutationUpdateCampaignArgs = {
@@ -81,9 +82,10 @@ export type MutationResponse = {
 
 export type Query = {
   __typename?: 'Query';
+  _placeholder?: Maybe<Scalars['String']>;
+  users: Array<User>;
   campaign?: Maybe<Campaign>;
   campaigns: Array<Campaign>;
-  users: Array<User>;
 };
 
 export type QueryCampaignArgs = {

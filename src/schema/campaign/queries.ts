@@ -1,5 +1,5 @@
 import { ApolloError } from 'apollo-server';
-import { Campaign, QueryCampaignArgs } from 'src/schema';
+import { Campaign, QueryCampaignArgs } from 'src/typings';
 import { Resolver } from 'src/helpers';
 import { getCampaignById, getAllCampaigns } from './data';
 

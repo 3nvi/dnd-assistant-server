@@ -1,15 +1,23 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { campaignModel } from './models';
-import { MutationCreateCampaignArgs, MutationUpdateCampaignArgs } from '../../schema';
+import { MutationCreateCampaignArgs, MutationUpdateCampaignArgs } from 'src/typings';
+import { UserDocument } from '../user';
 
 // Creates a basic campaign
 export const createCampaign = async ({
   name,
   dungeonMaster,
   players,
-}: MutationCreateCampaignArgs) => {
-  const campaign = await campaignModel.create({ name, dungeonMaster, players });
+  createdBy,
+}: MutationCreateCampaignArgs & { createdBy: UserDocument['_id'] }) => {
+  const campaign = await campaignModel.create({ name, dungeonMaster, players, createdBy });
   return campaign.populate('dungeonMaster players').execPopulate();
+};
+
+// Gets the ID of the owner of the campaign
+export const getCampaignOwnerId = async (id: string) => {
+  const campaign = await campaignModel.findById(id).select('createdBy');
+  return campaign?.createdBy;
 };
 
 // deletes a single campaign from the DB
@@ -27,24 +35,15 @@ export const updateCampaignDetailsById = async (
   id: string,
   { name, players }: Partial<MutationUpdateCampaignArgs>
 ) => {
-  const campaign = await getCampaignById(id);
+  const campaign = await campaignModel.findOneAndUpdate(
+    { _id: id },
+    { name, players },
+    { new: true }
+  );
+
   if (!campaign) {
-    throw new Error('Invalid Campaign Id');
+    throw new Error('NOT_FOUND');
   }
 
-  if (name) {
-    campaign.name = name;
-  }
-  if (players) {
-    // @ts-ignore
-    campaign.players = players;
-  }
-
-  try {
-    campaign.save();
-  } catch (err) {
-    throw new Error(err.message);
-  }
-
-  return campaign.populate('dungeonMaster players').execPopulate();
+  return await campaign.populate('dungeonMaster players').execPopulate();
 };

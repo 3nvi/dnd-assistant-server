@@ -3,22 +3,26 @@ import {
   MutationCreateCampaignArgs,
   MutationDeleteCampaignArgs,
   MutationUpdateCampaignArgs,
-} from 'src/schema';
-import { UserInputError, ApolloError } from 'apollo-server';
-import { MutationResponse } from '../../helpers';
-import { MutationResolver } from 'src/helpers';
-import { createCampaign, deleteCampaignById, updateCampaignDetailsById } from './data';
+} from 'src/typings';
+import { UserInputError, ApolloError, ForbiddenError } from 'apollo-server';
+import { MutationResponse, MutationResolver } from '../../helpers';
+import {
+  createCampaign,
+  deleteCampaignById,
+  getCampaignById,
+  updateCampaignDetailsById,
+} from './data';
 
 const createCampaignResolver: MutationResolver<
   { campaign: Campaign },
   MutationCreateCampaignArgs
-> = async (parent, { name, dungeonMaster, players }) => {
+> = async (parent, { name, dungeonMaster, players }, { user }) => {
   if (players.includes(dungeonMaster)) {
     throw new UserInputError("The DM can't be a player");
   }
 
   try {
-    const campaign = await createCampaign({ name, dungeonMaster, players });
+    const campaign = await createCampaign({ name, dungeonMaster, players, createdBy: user._id });
     return new MutationResponse('CampaignCreationSuccess', 'Campaign created successfully', {
       campaign,
     });
@@ -26,12 +30,22 @@ const createCampaignResolver: MutationResolver<
     return new ApolloError(err.message, 'DATABASE_ERROR');
   }
 };
+
 const updateCampaignResolver: MutationResolver<
   { campaign: Campaign },
   MutationUpdateCampaignArgs
-> = async (parent, { id, name, players }) => {
+> = async (parent, { id, name, players }, { user }) => {
+  let campaign = await getCampaignById(id);
+  if (!campaign) {
+    throw new UserInputError('Invalid Campaign Id');
+  }
+
+  if (!campaign.createdBy.equals(user._id)) {
+    throw new ForbiddenError('Only the owner of a campaign can modify it');
+  }
+
   try {
-    const campaign = await updateCampaignDetailsById(id, { name, players });
+    campaign = await updateCampaignDetailsById(id, { name, players });
     return new MutationResponse('CampaignUpdateSuccess', 'Campaign updates successfully', {
       campaign,
     });
@@ -42,8 +56,18 @@ const updateCampaignResolver: MutationResolver<
 
 const deleteCampaignResolver: MutationResolver<{}, MutationDeleteCampaignArgs> = async (
   parent,
-  { id }
+  { id },
+  { user }
 ) => {
+  const campaign = await getCampaignById(id);
+  if (!campaign) {
+    throw new UserInputError('Invalid Campaign Id');
+  }
+
+  if (!campaign.createdBy.equals(user._id)) {
+    throw new ForbiddenError('Only the owner of a campaign can delete it');
+  }
+
   try {
     await deleteCampaignById(id);
     return new MutationResponse('CampaignDeletionSuccess', 'Campaign deleted successfully');

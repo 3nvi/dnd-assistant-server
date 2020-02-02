@@ -1,12 +1,11 @@
 import { AuthenticationError } from 'apollo-server';
 import express from 'express';
-import { User } from './schema';
-import { userModel } from './schema/user';
+import { UserDocument, userModel } from './schema/user';
 import { authClient } from './auth';
 
-export type Context = { user: User } | null;
+export type Context = { user: UserDocument };
 
-const getContext = async ({ req }: { req: express.Request }): Promise<Context> => {
+const getContext = async ({ req }: { req: express.Request }): Promise<Context | null> => {
   // When introspection queries are enabled (i.e. NODE_ENV !== "production"), allow schema queries
   // without providing a JWT token
   if (req.body.query.trim().startsWith('query Introspection')) {

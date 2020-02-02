@@ -6,6 +6,7 @@ export interface CampaignDocument extends mongoose.Document {
   dungeonMaster: UserDocument;
   players: UserDocument[];
   createdAt: string;
+  createdBy: UserDocument['_id'];
   updatedAt: string;
 }
 const campaignSchema = new mongoose.Schema<CampaignDocument>(
@@ -25,6 +26,11 @@ const campaignSchema = new mongoose.Schema<CampaignDocument>(
         required: true,
       },
     ],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'user',
+      required: true,
+    },
   },
   {
     timestamps: true,
@@ -40,7 +46,6 @@ campaignSchema.pre('save', async function(next) {
     const userIdsToAddCampaignTo = [...campaignToBeSaved.players, campaignToBeSaved.dungeonMaster];
 
     // TODO: use `bulkWrite` operations for better performance. Postponed for the sake of progress
-
     const users = await userModel.find({
       _id: {
         $in: userIdsToAddCampaignTo.map(mongoose.Types.ObjectId),
