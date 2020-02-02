@@ -1,17 +1,14 @@
 import mongoose from 'mongoose';
-import userModel, { User, userModelName } from './user';
+import { userModel, UserDocument } from '../user';
 
-export interface Campaign extends mongoose.Document {
+export interface CampaignDocument extends mongoose.Document {
   name: string;
-  dungeonMaster: User;
-  players: User[];
+  dungeonMaster: UserDocument;
+  players: UserDocument[];
   createdAt: string;
   updatedAt: string;
 }
-
-export const campaignModelName = 'campaign';
-
-const campaignSchema = new mongoose.Schema<Campaign>(
+const campaignSchema = new mongoose.Schema<CampaignDocument>(
   {
     name: {
       type: String,
@@ -19,12 +16,12 @@ const campaignSchema = new mongoose.Schema<Campaign>(
     },
     dungeonMaster: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: userModelName,
+      ref: 'user',
     },
     players: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: userModelName,
+        ref: 'user',
         required: true,
       },
     ],
@@ -61,6 +58,4 @@ campaignSchema.pre('save', async function(next) {
   next();
 });
 
-const campaign = mongoose.model<Campaign>(campaignModelName, campaignSchema);
-
-export default campaign;
+export const campaignModel = mongoose.model<CampaignDocument>('campaign', campaignSchema);

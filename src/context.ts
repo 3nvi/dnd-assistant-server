@@ -1,11 +1,12 @@
 import { AuthenticationError } from 'apollo-server';
 import express from 'express';
-import models, { User } from './models';
+import { User } from './schema';
+import { userModel } from './schema/user';
 import { authClient } from './auth';
 
-type Context = (context: { req: express.Request }) => Promise<{ user: User }>;
+export type Context = { user: User };
 
-const getContext: Context = async ({ req }) => {
+const getContext = async ({ req }: { req: express.Request }): Promise<Context> => {
   // get the user token from the Authorization header (defined as "Bearer {TOKEN}")
   const token = req.headers.authorization?.split(' ')[1] || '';
   if (!token) {
@@ -17,7 +18,7 @@ const getContext: Context = async ({ req }) => {
     throw new AuthenticationError('Invalid authorization token provided');
   }
 
-  const user = await models.user.findOne({ sub: authUser.sub }).select('_id');
+  const user = await userModel.findOne({ sub: authUser.sub }).select('_id');
   if (!user) {
     throw new AuthenticationError(
       'Authorization token is valid, but no user association was found'

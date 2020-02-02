@@ -1,23 +1,18 @@
 import { ApolloError } from 'apollo-server';
-import { QueryCampaignArgs } from 'src/schema';
-import models, { Campaign } from '../..//models';
+import { Campaign, QueryCampaignArgs } from 'src/schema';
+import { Resolver } from 'src/helpers';
+import { getCampaignById, getAllCampaigns } from './data';
 
-const getCampaignDetails = async (parent: null, { id }: QueryCampaignArgs): Promise<Campaign> => {
-  let campaign;
-  try {
-    campaign = await models.campaign.findById(id).populate('dungeonMaster players');
-  } catch (err) {
-    throw new ApolloError(err.message);
-  }
-
+const getCampaignDetails: Resolver<Campaign, QueryCampaignArgs> = async (parent: null, { id }) => {
+  const campaign = await getCampaignById(id);
   if (!campaign) {
     throw new ApolloError('Invalid Campaign Id', 'NOT_FOUND', { id });
   }
   return campaign;
 };
 
-const listCampaignSummaries = async (): Promise<Campaign[]> => {
-  return await models.campaign.find().populate('dungeonMaster players');
+const listCampaignSummaries: Resolver<Campaign[]> = async () => {
+  return await getAllCampaigns();
 };
 
 export default {

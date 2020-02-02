@@ -1,24 +1,24 @@
 import {
+  Campaign,
   MutationCreateCampaignArgs,
   MutationDeleteCampaignArgs,
   MutationUpdateCampaignArgs,
 } from 'src/schema';
 import { UserInputError, ApolloError } from 'apollo-server';
 import { MutationResponse } from '../../helpers';
-import models, { Campaign } from '../../models';
+import { MutationResolver } from 'src/helpers';
+import { createCampaign, deleteCampaignById, updateCampaignDetailsById } from './data';
 
-const createCampaign = async (
-  parent: null,
-  { name, dungeonMaster, players }: MutationCreateCampaignArgs
-): Promise<MutationResponse<{ campaign: Campaign }>> => {
+const createCampaignResolver: MutationResolver<
+  { campaign: Campaign },
+  MutationCreateCampaignArgs
+> = async (parent, { name, dungeonMaster, players }) => {
   if (players.includes(dungeonMaster)) {
     throw new UserInputError("The DM can't be a player");
   }
 
   try {
-    let campaign = await models.campaign.create({ name, dungeonMaster, players });
-    campaign = await campaign.populate('dungeonMaster players').execPopulate();
-
+    const campaign = await createCampaign({ name, dungeonMaster, players });
     return new MutationResponse('CampaignCreationSuccess', 'Campaign created successfully', {
       campaign,
     });
@@ -26,49 +26,34 @@ const createCampaign = async (
     return new ApolloError(err.message, 'DATABASE_ERROR');
   }
 };
-const updateCampaign = async (
-  parent: null,
-  { id, name, players }: MutationUpdateCampaignArgs
-): Promise<MutationResponse<{ campaign: Campaign }>> => {
-  let campaign = await models.campaign.findById(id);
-  if (!campaign) {
-    return new UserInputError('Invalid Campaign Id');
-  }
-
-  if (name) {
-    campaign.name = name;
-  }
-  if (players) {
-    // @ts-ignore
-    campaign.players = players;
-  }
-
+const updateCampaignResolver: MutationResolver<
+  { campaign: Campaign },
+  MutationUpdateCampaignArgs
+> = async (parent, { id, name, players }) => {
   try {
-    campaign.save();
+    const campaign = await updateCampaignDetailsById(id, { name, players });
+    return new MutationResponse('CampaignUpdateSuccess', 'Campaign updates successfully', {
+      campaign,
+    });
   } catch (err) {
-    return new UserInputError(err.message);
+    throw new UserInputError(err.message);
   }
-
-  campaign = await campaign.populate('dungeonMaster players').execPopulate();
-  return new MutationResponse('CampaignUpdateSuccess', 'Campaign updates successfully', {
-    campaign,
-  });
 };
 
-const deleteCampaign = async (
-  parent: null,
-  { id }: MutationDeleteCampaignArgs
-): Promise<MutationResponse<{ campaign: Campaign }>> => {
+const deleteCampaignResolver: MutationResolver<{}, MutationDeleteCampaignArgs> = async (
+  parent,
+  { id }
+) => {
   try {
-    await models.campaign.findOneAndDelete({ _id: id });
+    await deleteCampaignById(id);
     return new MutationResponse('CampaignDeletionSuccess', 'Campaign deleted successfully');
   } catch (err) {
-    return new ApolloError(err.message, 'DATABASE_ERROR');
+    throw new ApolloError(err.message, 'DATABASE_ERROR');
   }
 };
 
 export default {
-  createCampaign,
-  updateCampaign,
-  deleteCampaign,
+  createCampaign: createCampaignResolver,
+  updateCampaign: updateCampaignResolver,
+  deleteCampaign: deleteCampaignResolver,
 };

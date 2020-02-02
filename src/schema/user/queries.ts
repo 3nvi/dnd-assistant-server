@@ -1,10 +1,9 @@
-import models, { campaignModelName, User } from '../../models';
+import { Resolver } from 'src/helpers';
+import { User } from 'src/schema';
+import { getAllUsers } from './data';
 
-const listUserSummaries = async (): Promise<User[]> => {
-  return await models.user.find().populate({
-    path: 'campaigns',
-    model: campaignModelName,
-  });
+const listUserSummaries: Resolver<User[]> = async () => {
+  return await getAllUsers();
 };
 
 export default {
