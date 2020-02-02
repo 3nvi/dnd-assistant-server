@@ -1,4 +1,10 @@
-import { ApolloServer, gql, UserInputError, ApolloError } from 'apollo-server/dist';
+import {
+  ApolloServer,
+  gql,
+  UserInputError,
+  ApolloError,
+  AuthenticationError,
+} from 'apollo-server/dist';
 import mongoose from 'mongoose';
 import dateScalar from './scalars/Date';
 import { authClient } from './auth';
@@ -88,7 +94,7 @@ const resolvers = {
       }
 
       if (!campaign) {
-        throw new ApolloError('Invalid Campaign Id', 'NOT_FOUND');
+        throw new ApolloError('Invalid Campaign Id', 'NOT_FOUND', { id });
       }
       return campaign;
     },
@@ -174,13 +180,21 @@ const server = new ApolloServer({
   resolvers,
   context: async ({ req }): Promise<{ user: User | null; models: typeof models }> => {
     // get the user token from the Authorization header (defined as "Bearer {TOKEN}")
-    let user;
     const token = req.headers.authorization?.split(' ')[1] || '';
     if (!token) {
-      user = null;
-    } else {
-      // try to retrieve a user with the token
-      user = await authClient.getProfile(token);
+      throw new AuthenticationError('No authorization token provided');
+    }
+    // try to retrieve a user with the token
+    const authUser = await authClient.getProfile(token);
+    if (!authUser) {
+      throw new AuthenticationError('Invalid authorization token provided');
+    }
+
+    const user = await models.user.findOne({ sub: authUser.sub }).select('_id');
+    if (!user) {
+      throw new AuthenticationError(
+        'Authorization token is valid, but no user association was found'
+      );
     }
 
     // add the user to the context
