@@ -10,7 +10,7 @@ const typeDefs = gql`
   }
 
   extend type Query {
-    users: [User!]!
+    listUserSummaries: [User!]!
   }
 `;
 

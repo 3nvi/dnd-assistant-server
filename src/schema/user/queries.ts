@@ -7,5 +7,5 @@ const listUserSummaries: Resolver<User[]> = async () => {
 };
 
 export default {
-  users: listUserSummaries,
+  listUserSummaries,
 };

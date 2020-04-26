@@ -10,8 +10,6 @@ import {
   queries as campaignQueries,
   mutations as campaignMutations,
 } from './schema/campaign';
-import { userModel } from './schema/user';
-import { campaignModel } from './schema/campaign';
 
 const typeDefs = [rootTypeDefs, userTypeDefs, campaignTypeDefs];
 const resolvers = {

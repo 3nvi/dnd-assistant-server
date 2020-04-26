@@ -31,8 +31,8 @@ const typeDefs = gql`
   }
 
   extend type Query {
-    campaign(id: ID!): Campaign
-    campaigns: [Campaign!]!
+    getCampaignDetails(id: ID!): Campaign
+    listCampaignSummaries: [Campaign!]!
   }
 
   extend type Mutation {

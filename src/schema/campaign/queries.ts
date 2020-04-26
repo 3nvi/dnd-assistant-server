@@ -16,6 +16,6 @@ const listCampaignSummaries: Resolver<Campaign[]> = async () => {
 };
 
 export default {
-  campaign: getCampaignDetails,
-  campaigns: listCampaignSummaries,
+  getCampaignDetails,
+  listCampaignSummaries,
 };
